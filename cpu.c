@@ -1,4 +1,4 @@
-// Karine Pires de Araújo OSP - 2
+// Karine Pires de Araújo OSP - 3
 
 /****************************************************************************/
 /*                                                                          */
@@ -10,6 +10,10 @@
 
 /* OSP constant      */
 #include <malloc.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 #define   MAX_PAGE                   16 /* max size of page tables          */
 
 /* OSP enumeration constants */
@@ -136,6 +140,69 @@ int verificaNaFila(PCB * pcb, int id){
 	return 0;
 }
 
+//RECEBE UM PROCESSO COMO PARAMETRO PARA COLOCAR NO FIM DA FILA
+void insert_ready(pcb)
+PCB *pcb;
+{
+
+	//verifica se o processo jah foi escalado
+	if(pcb->last_cpuburst < 0){
+		pcb->priority = 0;
+	} else {
+		if(pcb->last_cpuburst > fila[pcb->priority].quantum - 3){
+			if(pcb->priority + 1 < 10){
+				pcb->priority++;			
+			} else {
+				pcb->priority = 9;			
+			}
+		} else if((fila[pcb->priority].quantum * 0.6) > pcb->last_cpuburst) {
+			if( pcb->priority == 0){
+				pcb->priority = 0;			
+			}
+			else {
+				pcb->priority--;			
+			}		
+		}
+
+		if(verificaNaFila(pcb, pcb->priority)){
+			return;
+		}
+	}
+	
+	pcb->status = ready;
+		
+	int id = pcb->priority;
+	if(fila[id].tam == 0){ // se a fila estiver vazia faz o nó ser o primeiro, onde o inicio e fim aponta para o mesmo no
+		pcb->next = pcb; // o proximo do fim é ele mesmo
+		pcb->prev = pcb; // o anterior do fim é ele mesmo
+		
+		fila[id].inicio = pcb; // faz o inicio apontar para o novo nó
+		fila[id].fim = pcb; // faz o fim apontar para o novo nó
+		fila[id].tam = 1;
+	} else { // se a fila tiver pelo menos um elemento então vou fazer apenas o novo nó apontar para o inicio e o apontar para o penultimo
+		pcb->next = fila[id].inicio; // faz o proximo do novo nó apontar para o inicio
+		pcb->prev = fila[id].fim; // faz o anterior do novo nó apontar para o fim
+		pcb->next->prev = pcb; // faz inicio apontar para o novo fim
+		pcb->prev->next = pcb;  // faz o antigo fim apontar para o novo nó
+		
+		fila[id].fim = pcb; // faz o novo nó se tornar o fim
+		fila[id].tam++; // aumenta o tamanho da fila
+	}
+
+	int k;
+	for(k = 0 ; k < MAX ; k++){
+		PCB *aux = fila[k].inicio;
+		
+		int l = 0;
+		while(l < fila[k].tam){
+			fprintf(stderr, "\nFila: %i\tId processo: %i\tlast_cpuburst: %i\n", k, aux->pcb_id, aux->last_cpuburst);
+			l++;
+			aux = aux->next;
+		}
+	}
+
+}
+
 //pega o primeiro processo da fila principal/auxiliar e coloca para a execução
 void dispatch()
 {
@@ -178,69 +245,12 @@ void dispatch()
 		set_timer(fila[i].quantum);
 		break;
 	}
-}
-
-//RECEBE UM PROCESSO COMO PARAMETRO PARA COLOCAR NO FIM DA FILA
-void insert_ready(pcb)
-PCB *pcb;
-{
-
-	//verifica se o processo jah foi escalado
-	if(pcb->priority < 0){
-		pcb->priority = 0;
-	} else {
-		if(pcb->last_cpuburst > fila[pcb->priority].quantum - 3){
-			if(pcb->priority + 1 < 10){
-				pcb->priority++;			
-			} else {
-				pcb->priority = 9;			
-			}
-		} else if((fila[pcb->priority].quantum * 0.6) > pcb->last_cpuburst) {
-			if( pcb->priority == 0){
-				pcb->priority = 0;			
-			}
-			else {
-				pcb->priority--;			
-			}		
-		}
-
-		if(verificaNaFila(pcb, pcb->priority)){
-			return;
-		}
+	
+	if(i == 10){
+		PTBR = NULL;
+		return;
 	}
 	
-	pcb->status = ready;
-		
-	int id = pcb->priority;
-	if(fila[id].tamanho == 0){ // se a fila estiver vazia faz o nó ser o primeiro, onde o inicio e fim aponta para o mesmo no
-		pcb->next = pcb; // o proximo do fim é ele mesmo
-		pcb->prev = pcb; // o anterior do fim é ele mesmo
-		
-		fila[id].inicio = pcb; // faz o inicio apontar para o novo nó
-		fila[id].fim = pcb; // faz o fim apontar para o novo nó
-		fila[id].tam = 1;
-	} else { // se a fila tiver pelo menos um elemento então vou fazer apenas o novo nó apontar para o inicio e o apontar para o penultimo
-		pcb->next = fila[id].inicio; // faz o proximo do novo nó apontar para o inicio
-		pcb->prev = fila[id].fim; // faz o anterior do novo nó apontar para o fim
-		pcb->next->prev = pcb; // faz inicio apontar para o novo fim
-		pcb->prev->next = pcb;  // faz o antigo fim apontar para o novo nó
-		
-		fila[id].fim = pcb; // faz o novo nó se tornar o fim
-		fila[id].tam++; // aumenta o tamanho da fila
-	}
-
-	int k;
-	for(k = 0 ; k < MAX ; k++){
-		PCB *aux = fila[k].inicio;
-		
-		int l = 0;
-		while(l < fila[k].tam){
-			fprintf("\nFila: %i\tId processo: %i\tlast_cpuburst: %i\n", k, aux->pcb_id, aux->last_cpuburst);
-			l++;
-			aux = aux->next;
-		}
-	}
-
 }
 
 /* end of module */
